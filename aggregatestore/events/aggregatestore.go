@@ -17,6 +17,7 @@ package events
 import (
 	"context"
 	"errors"
+	"log"
 
 	"github.com/google/uuid"
 	eh "github.com/looplab/eventhorizon"
@@ -158,6 +159,42 @@ func (r *AggregateStore) Save(ctx context.Context, agg eh.Aggregate) error {
 
 	return nil
 }
+
+// Restore the previous state of an aggregate
+// 1. Load existing events
+// 2. Propagate existing events on the events bus
+// Consideration: Any consumers of the bus need to make sure not to apply events already received (based on version).
+func (r *AggregateStore) Restore(ctx context.Context, aggregateType eh.AggregateType, id uuid.UUID) (eh.Aggregate, error) {
+	agg, err := eh.CreateAggregate(aggregateType, id)
+	if err != nil {
+		return nil, err
+	}
+	a, ok := agg.(Aggregate)
+	if !ok {
+		return nil, ErrInvalidAggregateType
+	}
+
+	log.Printf("aggregate (before restore): %#v %#v", agg, agg.EntityID())
+	log.Printf("aggregate (before restore): %#v %#v", a, a.EntityID())
+
+	events, err := r.store.Load(ctx, a.EntityID())
+	if err != nil {
+		return nil, err
+	}
+
+	if err := r.applyEvents(ctx, a, events); err != nil {
+		return nil, err
+	}
+
+	for _, e := range events {
+		if err := r.bus.PublishEvent(ctx, e); err != nil {
+			return a, err
+		}
+	}
+
+	return a, nil
+}
+
 
 func (r *AggregateStore) applyEvents(ctx context.Context, a Aggregate, events []eh.Event) error {
 	for _, event := range events {

@@ -54,6 +54,9 @@ type AggregateStore interface {
 
 	// Save saves the uncommittend events for an aggregate.
 	Save(context.Context, Aggregate) error
+
+	// Restore an aggregate and update projections
+	Restore(context.Context, AggregateType, uuid.UUID) (Aggregate, error)
 }
 
 var aggregates = make(map[AggregateType]func(uuid.UUID) Aggregate)

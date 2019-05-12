@@ -17,6 +17,7 @@ package aggregate
 import (
 	"context"
 	"errors"
+	"github.com/google/uuid"
 
 	eh "github.com/looplab/eventhorizon"
 )
@@ -71,4 +72,8 @@ func (h *CommandHandler) HandleCommand(ctx context.Context, cmd eh.Command) erro
 	}
 
 	return h.store.Save(ctx, a)
+}
+
+func (h *CommandHandler) Restore(ctx context.Context, uuid uuid.UUID) (eh.Aggregate, error) {
+	return h.store.Restore(ctx, h.t, uuid)
 }

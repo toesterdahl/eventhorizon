@@ -273,6 +273,15 @@ func (m *AggregateStore) Save(ctx context.Context, aggregate eh.Aggregate) error
 	return nil
 }
 
+// Restore implements the Save method of the eventhorizon.AggregateStore interface.
+func (m *AggregateStore) Restore(ctx context.Context, aggregateType eh.AggregateType, id uuid.UUID) (eh.Aggregate, error) {
+	if m.Err != nil {
+		return nil, m.Err
+	}
+	m.Context = ctx
+	return m.Aggregates[id], nil
+}
+
 // EventStore is a mocked eventhorizon.EventStore, useful in testing.
 type EventStore struct {
 	Events  []eh.Event
